@@ -1,0 +1,2489 @@
+---
+title: "Clean Data pt 3"
+output: html_document
+date: '2022-11-15'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = F}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(utils)
+library(readxl)
+
+```
+
+#Year 2009
+
+```{r}
+YR2009 <- read.csv("./Data/UN_2009_SITC.txt", header = T, sep = ",")
+
+YR2009 <- YR2009 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2009 <- YR2009 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2009 <- YR2009 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2009 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2009 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2009 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2009 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2009)
+
+saveRDS(Total1, "./Data Proc/Clean_2009_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 2008
+
+```{r}
+YR2008 <- read.csv("./Data/UN_2008_SITC.txt", header = T, sep = ",")
+
+YR2008 <- YR2008 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2008 <- YR2008 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2008 <- YR2008 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2008 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2008 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2008 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2008 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2008)
+
+saveRDS(Total1, "./Data Proc/Clean_2008_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 2007
+
+```{r}
+YR2007 <- read.csv("./Data/UN_2007_SITC.txt", header = T, sep = ",")
+
+YR2007 <- YR2007 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2007 <- YR2007 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2007 <- YR2007 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2007 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2007 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2007 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2007 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2007)
+
+saveRDS(Total1, "./Data Proc/Clean_2007_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 2006
+
+```{r}
+YR2006 <- read.csv("./Data/UN_2006_SITC.txt", header = T, sep = ",")
+
+YR2006 <- YR2006 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2006 <- YR2006 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2006 <- YR2006 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2006 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2006 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2006 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2006 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2006)
+
+saveRDS(Total1, "./Data Proc/Clean_2006_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 2005
+
+```{r}
+YR2005 <- read.csv("./Data/UN_2005_SITC.txt", header = T, sep = ",")
+
+YR2005 <- YR2005 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2005 <- YR2005 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2005 <- YR2005 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2005 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2005 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2005 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2005 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2005)
+
+saveRDS(Total1, "./Data Proc/Clean_2005_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 2004
+
+```{r}
+YR2004 <- read.csv("./Data/UN_2004_SITC.txt", header = T, sep = ",")
+
+YR2004 <- YR2004 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2004 <- YR2004 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2004 <- YR2004 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2004 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2004 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2004 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2004 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2004)
+
+saveRDS(Total1, "./Data Proc/Clean_2004_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 2003
+```{r}
+YR2003 <- read.csv("./Data/UN_2003_SITC.txt", header = T, sep = ",")
+
+YR2003 <- YR2003 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2003 <- YR2003 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2003 <- YR2003 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2003 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2003 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2003 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2003 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2003)
+
+saveRDS(Total1, "./Data Proc/Clean_2003_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 2002
+
+```{r}
+YR2002 <- read.csv("./Data/UN_2002_SITC.txt", header = T, sep = ",")
+
+YR2002 <- YR2002 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2002 <- YR2002 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2002 <- YR2002 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2002 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2002 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2002 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2002 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2002)
+
+saveRDS(Total1, "./Data Proc/Clean_2002_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 2001
+
+```{r}
+YR2001 <- read.csv("./Data/UN_2001_SITC.txt", header = T, sep = ",")
+
+YR2001 <- YR2001 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2001 <- YR2001 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2001 <- YR2001 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2001 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2001 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2001 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2001 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2001)
+
+saveRDS(Total1, "./Data Proc/Clean_2001_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 2000
+
+```{r}
+YR2000 <- read.csv("./Data/UN_2000_SITC.txt", header = T, sep = ",")
+
+YR2000 <- YR2000 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR2000 <- YR2000 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR2000 <- YR2000 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR2000 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR2000 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR2000 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR2000 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR2000)
+
+saveRDS(Total1, "./Data Proc/Clean_2000_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 1999
+
+```{r}
+YR1999 <- read.csv("./Data/UN_1999_SITC.txt", header = T, sep = ",")
+
+YR1999 <- YR1999 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1999 <- YR1999 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1999 <- YR1999 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1999 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1999 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1999 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1999 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1999)
+
+saveRDS(Total1, "./Data Proc/Clean_1999_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 1998
+
+```{r}
+YR1998 <- read.csv("./Data/UN_1998_SITC.txt", header = T, sep = ",")
+
+YR1998 <- YR1998 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1998 <- YR1998 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1998 <- YR1998 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1998 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1998 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1998 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1998 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1998)
+
+saveRDS(Total1, "./Data Proc/Clean_1998_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 1997
+
+```{r}
+YR1997 <- read.csv("./Data/UN_1997_SITC.txt", header = T, sep = ",")
+
+YR1997 <- YR1997 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1997 <- YR1997 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1997 <- YR1997 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1997 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1997 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1997 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1997 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1997)
+
+saveRDS(Total1, "./Data Proc/Clean_1997_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+#Year 1996
+
+```{r}
+YR1996 <- read.csv("./Data/UN_1996_SITC.txt", header = T, sep = ",")
+
+YR1996 <- YR1996 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1996 <- YR1996 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1996 <- YR1996 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1996 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1996 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1996 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1996 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1996)
+
+saveRDS(Total1, "./Data Proc/Clean_1996_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 1995
+
+```{r}
+YR1995 <- read.csv("./Data/UN_1995_SITC.txt", header = T, sep = ",")
+
+YR1995 <- YR1995 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1995 <- YR1995 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1995 <- YR1995 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1995 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1995 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1995 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1995 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1995)
+
+saveRDS(Total1, "./Data Proc/Clean_1995_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 1994
+
+```{r}
+YR1994 <- read.csv("./Data/UN_1994_SITC.txt", header = T, sep = ",")
+
+YR1994 <- YR1994 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1994 <- YR1994 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1994 <- YR1994 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1994 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1994 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1994 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1994 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1994)
+
+saveRDS(Total1, "./Data Proc/Clean_1994_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+
+#Year 1993
+
+```{r}
+YR1993 <- read.csv("./Data/UN_1993_SITC.txt", header = T, sep = ",")
+
+YR1993 <- YR1993 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1993 <- YR1993 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1993 <- YR1993 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1993 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1993 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1993 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1993 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1993)
+
+saveRDS(Total1, "./Data Proc/Clean_1993_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 1992
+
+```{r}
+YR1992 <- read.csv("./Data/UN_1992_SITC.txt", header = T, sep = ",")
+
+YR1992 <- YR1992 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1992 <- YR1992 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1992 <- YR1992 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1992 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1992 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1992 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1992 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1992)
+
+saveRDS(Total1, "./Data Proc/Clean_1992_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 1991
+
+```{r}
+YR1991 <- read.csv("./Data/UN_1991_SITC.txt", header = T, sep = ",")
+
+YR1991 <- YR1991 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1991 <- YR1991 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1991 <- YR1991 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1991 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1991 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1991 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1991 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1991)
+
+saveRDS(Total1, "./Data Proc/Clean_1991_SITC.RDS")
+
+rm(Total1)
+
+gc()
+
+```
+
+#Year 1990
+```{r}
+YR1990 <- read.csv("./Data/UN_1990_SITC.txt", header = T, sep = ",")
+
+YR1990 <- YR1990 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1990 <- YR1990 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1990 <- YR1990 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1990 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1990 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1990 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1990 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1990)
+
+saveRDS(Total1, "./Data Proc/Clean_1990_SITC.RDS")
+
+```
+
+
+#Year 1989
+
+```{r}
+YR1989 <- read.csv("./Data/UN_1989_SITC.txt", header = T, sep = ",")
+
+YR1989 <- YR1989 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1989 <- YR1989 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1989 <- YR1989 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1989 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1989 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1989 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1989 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1989)
+
+saveRDS(Total1, "./Data Proc/Clean_1989_SITC.RDS")
+
+```
+
+#Year 1988
+
+```{r}
+YR1988 <- read.csv("./Data/UN_1988_SITC.txt", header = T, sep = ",")
+
+YR1988 <- YR1988 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1988 <- YR1988 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1988 <- YR1988 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1988 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1988 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1988 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1988 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1988)
+
+saveRDS(Total1, "./Data Proc/Clean_1988_SITC.RDS")
+
+```
+
+#Year 1987
+
+```{r}
+YR1987 <- read.csv("./Data/UN_1987_SITC.txt", header = T, sep = ",")
+
+YR1987 <- YR1987 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1987 <- YR1987 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1987 <- YR1987 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1987 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1987 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1987 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1987 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1987)
+
+saveRDS(Total1, "./Data Proc/Clean_1987_SITC.RDS")
+
+```
+
+#Year 1986
+
+```{r}
+YR1986 <- read.csv("./Data/UN_1986_SITC.txt", header = T, sep = ",")
+
+YR1986 <- YR1986 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1986 <- YR1986 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1986 <- YR1986 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1986 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1986 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1986 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1986 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1986)
+
+saveRDS(Total1, "./Data Proc/Clean_1986_SITC.RDS")
+
+```
+
+#Year 1985
+```{r}
+YR1985 <- read.csv("./Data/UN_1985_SITC.txt", header = T, sep = ",")
+
+YR1985 <- YR1985 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1985 <- YR1985 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1985 <- YR1985 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1985 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1985 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1985 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1985 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1985)
+
+saveRDS(Total1, "./Data Proc/Clean_1985_SITC.RDS")
+
+```
+
+#Year 1984
+
+```{r}
+YR1984 <- read.csv("./Data/UN_1984_SITC.txt", header = T, sep = ",")
+
+YR1984 <- YR1984 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1984 <- YR1984 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1984 <- YR1984 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1984 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1984 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1984 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1984 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1984)
+
+saveRDS(Total1, "./Data Proc/Clean_1984_SITC.RDS")
+
+```
+
+#Year 1983
+
+```{r}
+YR1983 <- read.csv("./Data/UN_1983_SITC.txt", header = T, sep = ",")
+
+YR1983 <- YR1983 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1983 <- YR1983 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1983 <- YR1983 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1983 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1983 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1983 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1983 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1983)
+
+saveRDS(Total1, "./Data Proc/Clean_1983_SITC.RDS")
+
+```
+
+#Year 1982
+```{r}
+YR1982 <- read.csv("./Data/UN_1982_SITC.txt", header = T, sep = ",")
+
+YR1982 <- YR1982 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1982 <- YR1982 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1982 <- YR1982 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1982 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1982 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1982 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1982 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1982)
+
+saveRDS(Total1, "./Data Proc/Clean_1982_SITC.RDS")
+
+```
+
+#Year 1981
+```{r}
+YR1981 <- read.csv("./Data/UN_1981_SITC.txt", header = T, sep = ",")
+
+YR1981 <- YR1981 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1981 <- YR1981 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1981 <- YR1981 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1981 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1981 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1981 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1981 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1981)
+
+saveRDS(Total1, "./Data Proc/Clean_1981_SITC.RDS")
+
+```
+
+#Year 1980
+
+```{r}
+YR1980 <- read.csv("./Data/UN_1980_SITC.txt", header = T, sep = ",")
+
+YR1980 <- YR1980 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1980 <- YR1980 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1980 <- YR1980 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1980 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1980 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1980 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1980 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1980)
+
+saveRDS(Total1, "./Data Proc/Clean_1980_SITC.RDS")
+
+```
+
+#Year 1979
+
+```{r}
+YR1979 <- read.csv("./Data/UN_1979_SITC.txt", header = T, sep = ",")
+
+YR1979 <- YR1979 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1979 <- YR1979 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1979 <- YR1979 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1979 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1979 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1979 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1979 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1979)
+
+saveRDS(Total1, "./Data Proc/Clean_1979_SITC.RDS")
+
+```
+
+#Year 1978
+
+```{r}
+YR1978 <- read.csv("./Data/UN_1978_SITC.txt", header = T, sep = ",")
+
+YR1978 <- YR1978 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1978 <- YR1978 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1978 <- YR1978 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1978 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1978 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1978 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1978 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1978)
+
+saveRDS(Total1, "./Data Proc/Clean_1978_SITC.RDS")
+
+```
+
+#Year 1977
+
+```{r}
+YR1977 <- read.csv("./Data/UN_1977_SITC.txt", header = T, sep = ",")
+
+YR1977 <- YR1977 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1977 <- YR1977 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1977 <- YR1977 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1977 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1977 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1977 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1977 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1977)
+
+saveRDS(Total1, "./Data Proc/Clean_1977_SITC.RDS")
+
+```
+
+#Year 1976
+
+```{r}
+YR1976 <- read.csv("./Data/UN_1976_SITC.txt", header = T, sep = ",")
+
+YR1976 <- YR1976 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1976 <- YR1976 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1976 <- YR1976 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1976 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1976 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1976 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1976 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1976)
+
+saveRDS(Total1, "./Data Proc/Clean_1976_SITC.RDS")
+
+```
+
+#Year 1975
+
+```{r}
+YR1975 <- read.csv("./Data/UN_1975_SITC.txt", header = T, sep = ",")
+
+YR1975 <- YR1975 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1975 <- YR1975 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1975 <- YR1975 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1975 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1975 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1975 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1975 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1975)
+
+saveRDS(Total1, "./Data Proc/Clean_1975_SITC.RDS")
+
+```
+
+#Year 1974
+```{r}
+YR1974 <- read.csv("./Data/UN_1974_SITC.txt", header = T, sep = ",")
+
+YR1974 <- YR1974 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1974 <- YR1974 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1974 <- YR1974 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1974 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1974 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1974 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1974 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1974)
+
+saveRDS(Total1, "./Data Proc/Clean_1974_SITC.RDS")
+
+```
+
+#Year 1973
+
+```{r}
+YR1973 <- read.csv("./Data/UN_1973_SITC.txt", header = T, sep = ",")
+
+YR1973 <- YR1973 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1973 <- YR1973 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1973 <- YR1973 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1973 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1973 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1973 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1973 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1973)
+
+saveRDS(Total1, "./Data Proc/Clean_1973_SITC.RDS")
+
+```
+
+#Year 1972
+
+```{r}
+YR1972 <- read.csv("./Data/UN_1972_SITC.txt", header = T, sep = ",")
+
+YR1972 <- YR1972 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1972 <- YR1972 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1972 <- YR1972 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1972 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1972 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1972 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1972 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1972)
+
+saveRDS(Total1, "./Data Proc/Clean_1972_SITC.RDS")
+
+```
+
+#Year 1971
+
+```{r}
+YR1971 <- read.csv("./Data/UN_1971_SITC.txt", header = T, sep = ",")
+
+YR1971 <- YR1971 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1971 <- YR1971 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1971 <- YR1971 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1971 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1971 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1971 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1971 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1971)
+
+saveRDS(Total1, "./Data Proc/Clean_1971_SITC.RDS")
+
+```
+
+#Year 1970
+
+```{r}
+YR1970 <- read.csv("./Data/UN_1970_SITC.txt", header = T, sep = ",")
+
+YR1970 <- YR1970 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1970 <- YR1970 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1970 <- YR1970 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1970 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1970 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1970 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1970 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1970)
+
+saveRDS(Total1, "./Data Proc/Clean_1970_SITC.RDS")
+
+```
+
+#Year 1969
+
+```{r}
+YR1969 <- read.csv("./Data/UN_1969_SITC.txt", header = T, sep = ",")
+
+YR1969 <- YR1969 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1969 <- YR1969 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1969 <- YR1969 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1969 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1969 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1969 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1969 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1969)
+
+saveRDS(Total1, "./Data Proc/Clean_1969_SITC.RDS")
+
+```
+
+#Year 1968
+
+```{r}
+YR1968 <- read.csv("./Data/UN_1968_SITC.txt", header = T, sep = ",")
+
+YR1968 <- YR1968 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1968 <- YR1968 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1968 <- YR1968 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1968 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1968 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1968 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1968 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1968)
+
+saveRDS(Total1, "./Data Proc/Clean_1968_SITC.RDS")
+
+```
+
+#Year 1967
+
+```{r}
+YR1967 <- read.csv("./Data/UN_1967_SITC.txt", header = T, sep = ",")
+
+YR1967 <- YR1967 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1967 <- YR1967 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1967 <- YR1967 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1967 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1967 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1967 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1967 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1967)
+
+saveRDS(Total1, "./Data Proc/Clean_1967_SITC.RDS")
+
+```
+
+#Year 1966
+
+```{r}
+YR1966 <- read.csv("./Data/UN_1966_SITC.txt", header = T, sep = ",")
+
+YR1966 <- YR1966 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1966 <- YR1966 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1966 <- YR1966 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1966 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1966 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1966 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1966 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1966)
+
+saveRDS(Total1, "./Data Proc/Clean_1966_SITC.RDS")
+
+```
+
+#Year 1965
+
+```{r}
+YR1965 <- read.csv("./Data/UN_1965_SITC.txt", header = T, sep = ",")
+
+YR1965 <- YR1965 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1965 <- YR1965 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1965 <- YR1965 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1965 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1965 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1965 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1965 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1965)
+
+saveRDS(Total1, "./Data Proc/Clean_1965_SITC.RDS")
+
+```
+
+#Year 1964
+
+```{r}
+YR1964 <- read.csv("./Data/UN_1964_SITC.txt", header = T, sep = ",")
+
+YR1964 <- YR1964 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1964 <- YR1964 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1964 <- YR1964 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1964 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1964 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1964 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1964 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1964)
+
+saveRDS(Total1, "./Data Proc/Clean_1964_SITC.RDS")
+
+```
+
+#Year 1963
+```{r}
+YR1963 <- read.csv("./Data/UN_1963_SITC.txt", header = T, sep = ",")
+
+YR1963 <- YR1963 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1963 <- YR1963 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1963 <- YR1963 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1963 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1963 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1963 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1963 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1963)
+
+saveRDS(Total1, "./Data Proc/Clean_1963_SITC.RDS")
+
+```
+
+
+# Year 1962
+```{r}
+YR1962 <- read.csv("./Data/UN_1962_SITC.txt", header = T, sep = ",")
+
+YR1962 <- YR1962 %>% dplyr::select(Classification, Year, Trade.Flow, Reporter, Partner, Commodity.Code, Commodity, Trade.Value..US..)
+
+YR1962 <- YR1962 %>% dplyr::filter((Trade.Flow == "Import" | Trade.Flow == "Re-Import") & Commodity.Code != "TOTAL")
+
+YR1962 <- YR1962 %>% dplyr::mutate(TF_Var = str_detect(Commodity.Code, "([[:alnum:]]{6})") | str_detect(Commodity.Code, "([[:alnum:]]{5})") | str_detect(Commodity.Code, "([[:alnum:]]{4})")) %>% dplyr::filter(TF_Var == "TRUE") %>% dplyr::select(-c(TF_Var))
+
+Imports <- YR1962 %>% dplyr::filter(Trade.Flow == "Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Reimports <- YR1962 %>% dplyr::filter(Trade.Flow == "Re-Import" & Partner != "World") %>% dplyr::group_by(Reporter, Commodity.Code, Commodity, Year, Classification) %>% dplyr::summarise(Trade_Value = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Total <- merge(Imports, Reimports, by = c("Reporter", "Commodity.Code", "Commodity", "Year", "Classification"), all.x = T, all.y = T)
+
+Total <- Total %>% dplyr::rename(Total_Imports = Trade_Value.x, Total_Reimports = Trade_Value.y)
+
+rm(Imports, Reimports)
+
+Ecuador <- Total %>% dplyr::filter(Reporter == "Ecuador") %>% dplyr::select(Commodity.Code, Total_Imports, Total_Reimports) %>% dplyr::rename(Total_Imports_ECU = Total_Imports, Total_Reimport_ECU = Total_Reimports)
+
+Ecuador_Partner_IM <- YR1962 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_IM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner_RM <- YR1962 %>% dplyr::filter(Partner == "Ecuador" & Trade.Flow == "Re-Import") %>% dplyr::group_by(Reporter, Commodity.Code) %>% dplyr::summarise(Trade_Value_ECU_Part_RM = sum(Trade.Value..US..)) %>% dplyr::ungroup()
+
+Ecuador_Partner <- merge(Ecuador_Partner_IM, Ecuador_Partner_RM, by = c("Commodity.Code", "Reporter"), all.x =T, all.y = T)
+
+rm(Ecuador_Partner_IM, Ecuador_Partner_RM)
+
+Total1 <- merge(Total, Ecuador, by = c("Commodity.Code"), all.x = T, all.y = T)
+Total1 <- merge(Total1, Ecuador_Partner, by = c("Commodity.Code", "Reporter"), all.x = T, all.y = T)
+
+Total1$Total_Reimports[is.na(Total1$Total_Reimports)] <- 0
+Total1$Total_Imports_ECU[is.na(Total1$Total_Imports_ECU)] <- 0
+Total1$Total_Reimport_ECU[is.na(Total1$Total_Reimport_ECU)] <-0
+Total1$Trade_Value_ECU_Part_IM[is.na(Total1$Trade_Value_ECU_Part_IM)] <-0
+Total1$Trade_Value_ECU_Part_RM[is.na(Total1$Trade_Value_ECU_Part_RM)] <-0
+
+Total1 <- Total1 %>% dplyr::mutate(Net_Imports = Total_Imports - Total_Imports_ECU, Net_Imports_Partner = Total_Imports - Trade_Value_ECU_Part_IM)
+
+Total1 <- Total1 %>% dplyr::group_by(Reporter, Year, Commodity.Code, Commodity, Classification, Total_Imports, Total_Reimports, Total_Imports_ECU, Total_Reimport_ECU, Trade_Value_ECU_Part_IM, Trade_Value_ECU_Part_RM, Net_Imports, Net_Imports_Partner) %>% dplyr::summarise(n=n()) %>% dplyr::ungroup() %>% dplyr::select(-n)
+
+rm(Total, Ecuador, Ecuador_Partner, YR1962)
+
+saveRDS(Total1, "./Data Proc/Clean_1962_SITC.RDS")
+
+```

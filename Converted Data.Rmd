@@ -1,0 +1,618 @@
+---
+title: "Converted Data"
+output: html_document
+date: '2022-11-30'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = F}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(utils)
+library(readxl)
+library(clipr)
+```
+
+
+```{r}
+H4toH3 <- read.csv("./Data/HS4toHS3.txt", header = T, sep = ",") #load the conversion from H3 to H4
+H4toH3$HS4 <- sprintf("%06d", H4toH3$HS4) #change the 5 digit product codes to 6 digit codes
+H4toH3$HS3<- sprintf("%06d", H4toH3$HS3)
+H4toH3 <- H4toH3 %>% dplyr::rename(Product_Code = HS3) # rename the product code to HS3
+
+H4toH2 <- read.csv("./Data/HS4toHS2.txt", header = T, sep = ",") #load the conversion from H2 to H4
+H4toH2$HS4 <- sprintf("%06d", H4toH2$HS4) 
+H4toH2$HS2<- sprintf("%06d", H4toH2$HS2)
+H4toH2 <- H4toH2 %>% dplyr::rename(Product_Code = HS2)
+
+H4toH1 <- read.csv("./Data/HS4toHS1.txt", header = T, sep = ",") #load the conversion from H1 to H4
+H4toH1$HS4 <- sprintf("%06d", H4toH1$HS4)
+H4toH1$HS1<- sprintf("%06d", H4toH1$HS1)
+H4toH1 <- H4toH1 %>% dplyr::rename(Product_Code = HS1)
+
+H4toH0 <- read.csv("./Data/HS4toHS0.txt", header = T, sep = ",") #load the conversion from H0 to H4
+H4toH0$HS4 <- sprintf("%06d", H4toH0$HS4)
+H4toH0$HS0<- sprintf("%06d", H4toH0$HS0)
+H4toH0 <- H4toH0 %>% dplyr::rename(Product_Code = HS0)
+
+```
+
+```{r}
+df2016 <- Clean_Data2 %>% dplyr::filter(Year == "2016") #create dataframes for each year
+df2015 <- Clean_Data2 %>% dplyr::filter(Year == "2015")
+df2014 <- Clean_Data2 %>% dplyr::filter(Year == "2014")
+df2013 <- Clean_Data2 %>% dplyr::filter(Year == "2013")
+df2012 <- Clean_Data2 %>% dplyr::filter(Year == "2012")
+df2011 <- Clean_Data2 %>% dplyr::filter(Year == "2011")
+df2010 <- Clean_Data2 %>% dplyr::filter(Year == "2010")
+df2009 <- Clean_Data2 %>% dplyr::filter(Year == "2009")
+df2008 <- Clean_Data2 %>% dplyr::filter(Year == "2008")
+df2007 <- Clean_Data2 %>% dplyr::filter(Year == "2007")
+```
+
+
+#Duplicates of 2016
+```{r}
+test_2016H3 <- df2016 %>% dplyr::filter(Classification == "H3") #create a dataframe for product codes falling in the H3 category
+new_2016H3 <- merge(test_2016H3, H4toH3, by = "Product_Code") #merge the H3 products with the loaded conversion table
+dups_2016H3 <- new_2016H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports) #generate the duplicated product codes resulted from the merge
+
+df4 <- dups_2016H3 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4) #create a dataframe that contains the country, product code, product, number of duplicates, and the multiple matches of HS4
+
+test_2016H2 <- df2016 %>% dplyr::filter(Classification == "H2") #create a dataframe for product codes falling in the H2 category
+new_2016H2 <- merge(test_2016H2, H4toH2, by = "Product_Code")
+dups_2016H2 <- new_2016H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2016H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+Total_dups_2016 <- (nrow(dups_2016H3) + nrow(dups_2016H2)) / nrow(df2016) #calculate how many duplicate product rows over all the rows
+(Total_dups_2016 * 100) %>% write_clip() #convert previous number into percentage and copy 
+```
+
+#Duplicates of 2015
+```{r}
+test_2015H3 <- df2015 %>% dplyr::filter(Classification == "H3")
+new_2015H3 <- merge(test_2015H3, H4toH3, by = "Product_Code")
+dups_2015H3 <- new_2015H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+test_2015H2 <- df2015 %>% dplyr::filter(Classification == "H2")
+new_2015H2 <- merge(test_2015H2, H4toH2, by = "Product_Code")
+dups_2015H2 <- new_2015H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2015H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+Total_dups_2015 <- (nrow(dups_2015H3) + nrow(dups_2015H2)) / nrow(df2015)
+Total_dups_2015 %>% write_clip()
+```
+
+#Duplicates of 2014
+```{r}
+test_2014H3 <- df2014 %>% dplyr::filter(Classification == "H3")
+new_2014H3 <- merge(test_2014H3, H4toH3, by = "Product_Code")
+dups_2014H3 <- new_2014H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+test_2014H2 <- df2014 %>% dplyr::filter(Classification == "H2")
+new_2014H2 <- merge(test_2014H2, H4toH2, by = "Product_Code")
+dups_2014H2 <- new_2014H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2014H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+Total_dups_2014 <- (nrow(dups_2014H3) + nrow(dups_2014H2)) / nrow(df2014)
+(Total_dups_2014 * 100) %>% write_clip()
+```
+
+#Duplicates of 2013
+```{r}
+test_2013H3 <- df2013 %>% dplyr::filter(Classification == "H3")
+new_2013H3 <- merge(test_2013H3, H4toH3, by = "Product_Code")
+dups_2013H3 <- new_2013H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+test_2013H2 <- df2013 %>% dplyr::filter(Classification == "H2")
+new_2013H2 <- merge(test_2013H2, H4toH2, by = "Product_Code")
+dups_2013H2 <- new_2013H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2013H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+Total_dups_2013 <- (nrow(dups_2013H3) + nrow(dups_2013H2)) / nrow(df2013)
+Total_dups_2013 %>% write_clip()
+```
+
+#Duplicates of 2012
+```{r}
+test_2012H3 <- df2012 %>% dplyr::filter(Classification == "H3")
+new_2012H3 <- merge(test_2012H3, H4toH3, by = "Product_Code")
+dups_2012H3 <- new_2012H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+test_2012H2 <- df2012 %>% dplyr::filter(Classification == "H2")
+new_2012H2 <- merge(test_2012H2, H4toH2, by = "Product_Code")
+dups_2012H2 <- new_2012H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2012H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2012H1 <- df2012 %>% dplyr::filter(Classification == "H1")
+new_2012H1 <- merge(test_2012H1, H4toH1, by = "Product_Code")
+dups_2012H1 <- new_2012H1 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df1 <- dups_2012H1 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+Total_dups_2012 <- (nrow(dups_2012H3) + nrow(dups_2012H2) + nrow(dups_2012H1)) / nrow(df2012)
+Total_dups_2012 %>% write_clip()
+```
+
+#Duplicates of 2011
+```{r}
+test_2011H3 <- df2011 %>% dplyr::filter(Classification == "H3")
+new_2011H3 <- merge(test_2011H3, H4toH3, by = "Product_Code")
+dups_2011H3 <- new_2011H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df4 <- dups_2011H3 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2011H2 <- df2011 %>% dplyr::filter(Classification == "H2")
+new_2011H2 <- merge(test_2011H2, H4toH2, by = "Product_Code")
+dups_2011H2 <- new_2011H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2011H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2011H1 <- df2011 %>% dplyr::filter(Classification == "H1")
+new_2011H1 <- merge(test_2011H1, H4toH1, by = "Product_Code")
+dups_2011H1 <- new_2011H1 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df1 <- dups_2011H1 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2011H0 <- df2011 %>% dplyr::filter(Classification == "H0")
+new_2011H0 <- merge(test_2011H0, H4toH0, by = "Product_Code")
+dups_2011H0 <- new_2011H0 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df <- dups_2011H0 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+Total_dups_2011 <- (nrow(dups_2011H3) + nrow(dups_2011H2) + nrow(dups_2011H1) + nrow(dups_2011H0)) / nrow(df2011)
+Total_dups_2011 %>% write_clip()
+
+```
+
+#Duplicates of 2010
+```{r}
+test_2010H3 <- df2010 %>% dplyr::filter(Classification == "H3")
+new_2010H3 <- merge(test_2010H3, H4toH3, by = "Product_Code")
+dups_2010H3 <- new_2010H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+test_2010H2 <- df2010 %>% dplyr::filter(Classification == "H2")
+new_2010H2 <- merge(test_2010H2, H4toH2, by = "Product_Code")
+dups_2010H2 <- new_2010H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2010H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2010H1 <- df2010 %>% dplyr::filter(Classification == "H1")
+new_2010H1 <- merge(test_2010H1, H4toH1, by = "Product_Code")
+dups_2010H1 <- new_2010H1 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df1 <- dups_2010H1 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2010H0 <- df2010 %>% dplyr::filter(Classification == "H0")
+new_2010H0 <- merge(test_2010H0, H4toH0, by = "Product_Code")
+dups_2010H0 <- new_2010H0 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df <- dups_2010H0 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+Total_dups_2010 <- (nrow(dups_2010H3) + nrow(dups_2010H2) + nrow(dups_2010H1) + nrow(dups_2010H0)) / nrow(df2010)
+Total_dups_2010 %>% write_clip()
+```
+
+#Duplicates of 2009
+```{r}
+test_2009H3 <- df2009 %>% dplyr::filter(Classification == "H3")
+new_2009H3 <- merge(test_2009H3, H4toH3, by = "Product_Code")
+dups_2009H3 <- new_2009H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+test_2009H2 <- df2009 %>% dplyr::filter(Classification == "H2")
+new_2009H2 <- merge(test_2009H2, H4toH2, by = "Product_Code")
+dups_2009H2 <- new_2009H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2009H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2009H1 <- df2009 %>% dplyr::filter(Classification == "H1")
+new_2009H1 <- merge(test_2009H1, H4toH1, by = "Product_Code")
+dups_2009H1 <- new_2009H1 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df1 <- dups_2009H1 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2009H0 <- df2009 %>% dplyr::filter(Classification == "H0")
+new_2009H0 <- merge(test_2009H0, H4toH0, by = "Product_Code")
+dups_2009H0 <- new_2009H0 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df <- dups_2009H0 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+Total_dups_2009 <- (nrow(dups_2009H3) + nrow(dups_2009H2) + nrow(dups_2009H1) + nrow(dups_2009H0)) / nrow(df2009)
+Total_dups_2009 %>% write_clip()
+```
+
+#Duplicates of 2008
+```{r}
+test_2008H3 <- df2008 %>% dplyr::filter(Classification == "H3")
+new_2008H3 <- merge(test_2008H3, H4toH3, by = "Product_Code")
+dups_2008H3 <- new_2008H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+test_2008H2 <- df2008 %>% dplyr::filter(Classification == "H2")
+new_2008H2 <- merge(test_2008H2, H4toH2, by = "Product_Code")
+dups_2008H2 <- new_2008H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2008H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2008H1 <- df2008 %>% dplyr::filter(Classification == "H1")
+new_2008H1 <- merge(test_2008H1, H4toH1, by = "Product_Code")
+dups_2008H1 <- new_2008H1 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df1 <- dups_2008H1 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2008H0 <- df2008 %>% dplyr::filter(Classification == "H0")
+new_2008H0 <- merge(test_2008H0, H4toH0, by = "Product_Code")
+dups_2008H0 <- new_2008H0 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df <- dups_2008H0 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+
+Total_dups_2008 <- (nrow(dups_2008H3) + nrow(dups_2008H2) + nrow(dups_2008H1) + nrow(dups_2008H0)) / nrow(df2008)
+Total_dups_2008 %>% write_clip()
+
+```
+
+#Duplicates of 2007
+```{r}
+test_2007H3 <- df2007 %>% dplyr::filter(Classification == "H3")
+new_2007H3 <- merge(test_2007H3, H4toH3, by = "Product_Code")
+dups_2007H3 <- new_2007H3 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df4 <- dups_2007H3 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2007H2 <- df2007 %>% dplyr::filter(Classification == "H2")
+new_2007H2 <- merge(test_2007H2, H4toH2, by = "Product_Code")
+dups_2007H2 <- new_2007H2 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df3 <- dups_2007H2 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2007H1 <- df2007 %>% dplyr::filter(Classification == "H1")
+new_2007H1 <- merge(test_2007H1, H4toH1, by = "Product_Code")
+dups_2007H1 <- new_2007H1 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df1 <- dups_2007H1 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+test_2007H0 <- df2007 %>% dplyr::filter(Classification == "H0")
+new_2007H0 <- merge(test_2007H0, H4toH0, by = "Product_Code")
+dups_2007H0 <- new_2007H0 %>% janitor::get_dupes(Country, Product_Code, Product, Total_Imports)
+
+df <- dups_2007H0 %>% dplyr::select(Country, Product_Code, Product, dupe_count, HS4)
+
+Total_dups_2007 <- (nrow(dups_2007H3) + nrow(dups_2007H2) + nrow(dups_2007H1) + nrow(dups_2007H0)) / nrow(df2007)
+Total_dups_2007 %>% write_clip()
+```
+
+```{r}
+new_2007H3.2 <- merge(test_2007H3, H4toH3, by = "Product_Code", all.x = T) #merge the H3 product codes to the conversion table of H4 to H3
+new_2007H3.2 <- new_2007H3.2 %>% dplyr::filter(is.na(HS4)) #create a dataframe that filters the NA/deleted product codes when converting from H3 to H4
+
+new_2007H2.2 <- merge(test_2007H2, H4toH2, by = "Product_Code", all.x = T) #merge the H2 product codes to the conversion table of H4 to H2
+new_2007H2.2 <- new_2007H2.2 %>% dplyr::filter(is.na(HS4)) #create a dataframe that filters the NA/deleted product codes when converting from H2 to H4
+
+new_2007H1.2 <- merge(test_2007H1, H4toH1, by = "Product_Code", all.x = T) #merge the H1 product codes to the conversion table of H4 to H1
+new_2007H1.2 <- new_2007H1.2 %>% dplyr::filter(is.na(HS4)) #create a datafram that filters the NA/deleted product codes when converting from H1 to H4
+
+new_2007H0.2 <- merge(test_2007H0, H4toH0, by = "Product_Code", all.x = T) #merge the H0 product codes to the conversion table of H4 to H0
+new_2007H0.2 <- new_2007H0.2 %>% dplyr::filter(is.na(HS4)) #create a dataframe that filters the NA/deleted product codes when converting from H0 to H4
+```
+
+
+```{r}
+new_2008H3.2 <- merge(test_2008H3, H4toH3, by = "Product_Code", all.x = T)
+new_2008H3.2 <- new_2008H3.2 %>% dplyr::filter(is.na(HS4))
+
+new_2008H2.2 <- merge(test_2008H2, H4toH2, by = "Product_Code", all.x = T)
+new_2008H2.2 <- new_2008H2.2 %>% dplyr::filter(is.na(HS4))
+
+new_2008H1.2 <- merge(test_2008H1, H4toH1, by = "Product_Code", all.x = T)
+new_2008H1.2 <- new_2008H1.2 %>% dplyr::filter(is.na(HS4))
+
+new_2008H0.2 <- merge(test_2008H0, H4toH0, by = "Product_Code", all.x = T)
+new_2008H0.2 <- new_2008H0.2 %>% dplyr::filter(is.na(HS4))
+
+```
+
+```{r}
+new_2009H3.2 <- merge(test_2009H3, H4toH3, by = "Product_Code", all.x = T)
+new_2009H3.2 <- new_2009H3.2 %>% dplyr::filter(is.na(HS4))
+
+new_2009H2.2 <- merge(test_2009H2, H4toH2, by = "Product_Code", all.x = T)
+new_2009H2.2 <- new_2009H2.2 %>% dplyr::filter(is.na(HS4))
+
+new_2009H1.2 <- merge(test_2009H1, H4toH1, by = "Product_Code", all.x = T)
+new_2009H1.2 <- new_2009H1.2 %>% dplyr::filter(is.na(HS4))
+
+new_2009H0.2 <- merge(test_2009H0, H4toH0, by = "Product_Code", all.x = T)
+new_2009H0.2 <- new_2009H0.2 %>% dplyr::filter(is.na(HS4))
+
+```
+
+```{r}
+new_2010H3.2 <- merge(test_2010H3, H4toH3, by = "Product_Code", all.x = T)
+new_2010H3.2 <- new_2010H3.2 %>% dplyr::filter(is.na(HS4))
+
+new_2010H2.2 <- merge(test_2010H2, H4toH2, by = "Product_Code", all.x = T)
+new_2010H2.2 <- new_2010H2.2 %>% dplyr::filter(is.na(HS4))
+
+new_2010H1.2 <- merge(test_2010H1, H4toH1, by = "Product_Code", all.x = T)
+new_2010H1.2 <- new_2010H1.2 %>% dplyr::filter(is.na(HS4))
+
+new_2010H0.2 <- merge(test_2010H0, H4toH0, by = "Product_Code", all.x = T)
+new_2010H0.2 <- new_2010H0.2 %>% dplyr::filter(is.na(HS4))
+
+```
+
+```{r}
+new_2011H3.2 <- merge(test_2011H3, H4toH3, by = "Product_Code", all.x = T)
+new_2011H3.2 <- new_2011H3.2 %>% dplyr::filter(is.na(HS4))
+
+new_2011H2.2 <- merge(test_2011H2, H4toH2, by = "Product_Code", all.x = T)
+new_2011H2.2 <- new_2011H2.2 %>% dplyr::filter(is.na(HS4))
+
+new_2011H1.2 <- merge(test_2011H1, H4toH1, by = "Product_Code", all.x = T)
+new_2011H1.2 <- new_2011H1.2 %>% dplyr::filter(is.na(HS4))
+
+new_2011H0.2 <- merge(test_2011H0, H4toH0, by = "Product_Code", all.x = T)
+new_2011H0.2 <- new_2011H0.2 %>% dplyr::filter(is.na(HS4))
+
+```
+
+```{r}
+new_2012H3.2 <- merge(test_2012H3, H4toH3, by = "Product_Code", all.x = T)
+new_2012H3.2 <- new_2012H3.2 %>% dplyr::filter(is.na(HS4))
+
+new_2012H2.2 <- merge(test_2012H2, H4toH2, by = "Product_Code", all.x = T)
+new_2012H2.2 <- new_2012H2.2 %>% dplyr::filter(is.na(HS4))
+
+new_2012H1.2 <- merge(test_2012H1, H4toH1, by = "Product_Code", all.x = T)
+new_2012H1.2 <- new_2012H1.2 %>% dplyr::filter(is.na(HS4))
+
+```
+
+```{r}
+new_2013H3.2 <- merge(test_2013H3, H4toH3, by = "Product_Code", all.x = T)
+new_2013H3.2 <- new_2013H3.2 %>% dplyr::filter(is.na(HS4))
+
+new_2013H2.2 <- merge(test_2013H2, H4toH2, by = "Product_Code", all.x = T)
+new_2013H2.2 <- new_2013H2.2 %>% dplyr::filter(is.na(HS4))
+
+```
+
+```{r}
+new_2014H3.2 <- merge(test_2014H3, H4toH3, by = "Product_Code", all.x = T)
+new_2014H3.2 <- new_2014H3.2 %>% dplyr::filter(is.na(HS4))
+
+new_2014H2.2 <- merge(test_2014H2, H4toH2, by = "Product_Code", all.x = T)
+new_2014H2.2 <- new_2014H2.2 %>% dplyr::filter(is.na(HS4))
+
+```
+
+```{r}
+new_2015H3.2 <- merge(test_2015H3, H4toH3, by = "Product_Code", all.x = T)
+new_2015H3.2 <- new_2015H3.2 %>% dplyr::filter(is.na(HS4))
+
+new_2015H2.2 <- merge(test_2015H2, H4toH2, by = "Product_Code", all.x = T)
+new_2015H2.2 <- new_2015H2.2 %>% dplyr::filter(is.na(HS4))
+
+```
+
+```{r}
+new_2016H3.2 <- merge(test_2016H3, H4toH3, by = "Product_Code", all.x = T)
+new_2016H3.2 <- new_2016H3.2 %>% dplyr::filter(is.na(HS4))
+
+new_2016H2.2 <- merge(test_2016H2, H4toH2, by = "Product_Code", all.x = T)
+new_2016H2.2 <- new_2016H2.2 %>% dplyr::filter(is.na(HS4))
+
+```
+
+```{r}
+distinct_2007_H3 <- new_2007H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup() #generate a dataframe with the unique product codes without the 1 to many relationships, do this for all subsequent product conversions and years
+distinct_2007_H2 <- new_2007H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2007_H1 <- new_2007H1 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2007_H0 <- new_2007H0 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+Unique_2007 <- distinct_2007_H0 %>% dplyr::bind_rows(distinct_2007_H2, distinct_2007_H1, distinct_2007_H3) #combine all unique product codes of 2007 into one dataframe
+
+```
+
+```{r}
+distinct_2008_H3 <- new_2008H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2008_H2 <- new_2008H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2008_H1 <- new_2008H1 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2008_H0 <- new_2008H0 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+Unique_2008 <- distinct_2008_H0 %>% dplyr::bind_rows(distinct_2008_H2, distinct_2008_H1, distinct_2008_H3)
+
+```
+
+```{r}
+distinct_2009_H3 <- new_2009H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2009_H2 <- new_2009H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2009_H1 <- new_2009H1 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2009_H0 <- new_2009H0 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+Unique_2009 <- distinct_2009_H0 %>% dplyr::bind_rows(distinct_2009_H2, distinct_2009_H1, distinct_2009_H3)
+```
+
+```{r}
+distinct_2010_H3 <- new_2010H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2010_H2 <- new_2010H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2010_H1 <- new_2010H1 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2010_H0 <- new_2010H0 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+Unique_2010 <- distinct_2010_H0 %>% dplyr::bind_rows(distinct_2010_H2, distinct_2010_H1, distinct_2010_H3)
+```
+
+```{r}
+distinct_2011_H3 <- new_2011H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2011_H2 <- new_2011H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2011_H1 <- new_2011H1 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2011_H0 <- new_2011H0 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+Unique_2011 <- distinct_2011_H0 %>% dplyr::bind_rows(distinct_2011_H2, distinct_2011_H1, distinct_2011_H3)
+
+```
+
+```{r}
+distinct_2012_H3 <- new_2012H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2012_H2 <- new_2012H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2012_H1 <- new_2012H1 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+H4_2012 <- df2012 %>% dplyr::filter(Classification == "H4")
+
+
+Unique_2012 <- H4_2012 %>% dplyr::bind_rows(distinct_2012_H3, distinct_2012_H2, distinct_2012_H1)
+
+```
+
+```{r}
+distinct_2013_H3 <- new_2013H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2013_H2 <- new_2013H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+H4_2013 <- df2013 %>% dplyr::filter(Classification == "H4")
+
+Unique_2013 <- H4_2013 %>% dplyr::bind_rows(distinct_2013_H2, distinct_2013_H3)
+```
+
+```{r}
+distinct_2014_H3 <- new_2014H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2014_H2 <- new_2014H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+H4_2014 <- df2014 %>% dplyr::filter(Classification == "H4")
+
+Unique_2014 <- H4_2014 %>% dplyr::bind_rows(distinct_2014_H2, distinct_2014_H3)
+```
+
+```{r}
+distinct_2015_H3 <- new_2015H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2015_H2 <- new_2015H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+H4_2015 <- df2015 %>% dplyr::filter(Classification == "H4")
+
+Unique_2015 <- H4_2015 %>% dplyr::bind_rows(distinct_2015_H2, distinct_2015_H3)
+```
+
+```{r}
+distinct_2016_H3 <- new_2016H3 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2016_H2 <- new_2016H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+H4_2016 <- df2016 %>% dplyr::filter(Classification == "H4")
+
+Unique_2016 <- H4_2016 %>% dplyr::bind_rows(distinct_2016_H2, distinct_2016_H3)
+```
+
+#Test 2016
+```{r}
+distinct_2016_H3.3 <- new_2016H3 %>% dplyr::count(Country, Year, HS4, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+distinct_2016_H2 <- new_2016H2 %>% dplyr::count(Country, Year, Product_Code, Product, Classification, Total_Imports, Total_Reimports, Import_from_ECU, Reimports_from_ECU, Net_Imports) %>% dplyr::filter(n==1) %>% dplyr::ungroup()
+
+H4_2016 <- df2016 %>% dplyr::filter(Classification == "H4")
+
+Unique_2016 <- H4_2016 %>% dplyr::bind_rows(distinct_2016_H2, distinct_2016_H3)
+```
+
+
+```{r}
+Unique_Data <- Unique_2007 %>% dplyr::bind_rows(Unique_2008, Unique_2009, Unique_2010, Unique_2011, Unique_2012, Unique_2013, Unique_2014, Unique_2015, Unique_2016) #combine all Unique year dataframes into one dataframe with all the unique product codes data
+
+saveRDS(Unique_Data, "UniqueData.RDS")
+
+
+```
+
+```{r}
+H3_Products_2016 <- distinct_2016_H3 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H3_Products_2015 <- distinct_2015_H3 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H3_Products_2014 <- distinct_2014_H3 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H3_Products_2012 <- distinct_2012_H3 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H3_Products_2008 <- distinct_2008_H3 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H3_Products_2007 <- distinct_2007_H3 %>% dplyr::select(Product_Code, Product) %>% distinct()
+
+H3_Product_Search <- H3_Products_2016 %>% dplyr::bind_rows(H3_Products_2015, H3_Products_2014, H3_Products_2012, H3_Products_2008, H3_Products_2007) %>% distinct()
+
+H3_Product <- merge(H3_Product_Search, H4toH3, by = "Product_Code")
+
+write.csv(H3_Product, "H3 Product Search.csv")
+
+
+H2_Products_2010 <- distinct_2010_H2 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H2_Products_2009 <- distinct_2009_H2 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H2_Products_2008 <- distinct_2008_H2 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H2_Products_2007 <- distinct_2007_H2 %>% dplyr::select(Product_Code, Product) %>% distinct()
+
+H2_Product_Search <- H2_Products_2010 %>% dplyr::bind_rows(H2_Products_2009, H2_Products_2008, H2_Products_2007) %>% distinct()
+
+H2_Product <- merge(H2_Product_Search, H4toH2, by = "Product_Code")
+
+write.csv(H2_Product, "H2 Product Search.csv")
+
+
+H1_Products_2010 <- distinct_2010_H1 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H1_Products_2009 <- distinct_2009_H1 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H1_Products_2008 <- distinct_2008_H1 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H1_Products_2007 <- distinct_2007_H1 %>% dplyr::select(Product_Code, Product) %>% distinct()
+
+H1_Product_Search <- H1_Products_2010 %>% dplyr::bind_rows(H1_Products_2009, H1_Products_2008, H1_Products_2007) %>% distinct()
+
+H1_Product <- merge(H1_Product_Search, H4toH1, by = "Product_Code")
+
+write.csv(H1_Product, "H1 Product Search.csv")
+
+
+H0_Products_2010 <- distinct_2010_H0 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H0_Products_2009 <- distinct_2009_H0 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H0_Products_2008 <- distinct_2008_H0 %>% dplyr::select(Product_Code, Product) %>% distinct()
+H0_Products_2007 <- distinct_2007_H0 %>% dplyr::select(Product_Code, Product) %>% distinct()
+
+H0_Product_Search <- H0_Products_2010 %>% dplyr::bind_rows(H0_Products_2009, H0_Products_2008, H0_Products_2007) %>% distinct()
+
+H0_Product <- merge(H0_Product_Search, H4toH0, by = "Product_Code")
+
+write.csv(H0_Product, "H0 Product Search.csv")
+
+
+```
+
+
+
+
+```{r}
+
+
+
+
+Product_search <- Clean_Data2 %>% dplyr::filter(Classification == "H4")
+
+Product_search <- Product_search %>% dplyr::distinct(Product, Product_Code)
+
+df2 <- merge(df4, Product_search, by.x = "HS4", by.y = "Product_Code") #just change the df, df1 etc. to get the corresponding codes.
+
+df2 <- df2 %>% dplyr::rename(HS2_Product = Product.x, HS4_Product = Product.y)
+
+df2.1 <- df2 %>% dplyr::select(-Country) %>% distinct() ## only when downloading the data
+
+write.csv(df2.1, "dupes_H3.csv")
+
+
+write.csv(Product_search, "product_search.csv")
+
+
+df8 <- new_2007H0.2 %>% dplyr::select(Product_Code, Product, HS4)
+df8 <- df8 %>% distinct()
+
+write.csv(df8, "missing_H0.csv")
+
+
+
+
+```
+
